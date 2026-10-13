@@ -1,0 +1,19 @@
+{
+  "name": "code-deep-dive-skill",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "DSH bundle: ships the code-deep-dive skill and wires an optional MCP code-analysis server.",
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "files": [
+    "code-deep-dive",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ]
+}

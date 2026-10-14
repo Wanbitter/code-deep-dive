@@ -11,8 +11,6 @@
 │   ├── references/            # mcp-selection / module-template / output-checklist
 │   ├── assets/                # 一份完整模块文档样例
 │   └── scripts/               # 跨平台安装与自检：setup-mcp.ps1 / setup-mcp.sh / verify-mcp.py
-├── package.json               # 可选：给开放插件安装的 DSH CLI profile 用
-├── cordis.patch.yml           # 可选：同上
 ├── README.md
 ├── LICENSE                    # MIT
 └── .gitignore
@@ -126,7 +124,6 @@ skill 本体不依赖任何第三方代码。MCP 部分调用的是别人的开�
 ## 维护须知
 
 - `serverName` 决定 MCP 工具名前缀（`mcp__repodigest__*`）。改它会让已有分析记录与权限规则里的工具名失配。
-- 若改用 `package.json` / `cordis.patch.yml` 走插件安装，`cordis.patch.yml` 靠包名定位自己的目录（`createRequire(baseUrl).resolve('code-deep-dive-skill/package.json')`），改 `package.json` 的 `name` 时必须同步改这一行。
 
 ## 许可
 

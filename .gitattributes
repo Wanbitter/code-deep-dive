@@ -1,0 +1,11 @@
+# Line-ending policy, so a checkout on any platform produces working scripts.
+* text=auto
+
+# Shell scripts must stay LF: CRLF makes bash report "bad interpreter".
+*.sh text eol=lf
+*.py text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+
+# PowerShell is conventional with CRLF on Windows.
+*.ps1 text eol=crlf

@@ -5,15 +5,17 @@
 **它不依赖任何 MCP server 也能用**：没有代码分析 MCP 工具时，流程走降级路径（glob/grep + 逐段读源码），结论统一标成"推测"档；接上 MCP 后同样的流程能拿到"已验证"档证据。MCP 是加速器，不是前置条件。
 
 ```
-code-deep-dive-skill/
+.
 ├── code-deep-dive/            # skill 本体（自包含，可单独拷走）
 │   ├── SKILL.md
 │   ├── references/            # mcp-selection / module-template / output-checklist
 │   ├── assets/                # 一份完整模块文档样例
-│   └── scripts/               # 跨平台安装与自检
-├── cordis.patch.yml           # DSH bundle patch
-├── package.json               # DSH bundle 清单
-└── LICENSE
+│   └── scripts/               # 跨平台安装与自检：setup-mcp.ps1 / setup-mcp.sh / verify-mcp.py
+├── cordis.patch.yml           # DSH bundle patch：注册 skill 目录 + 可选接上 MCP
+├── package.json               # bundle 清单（name / version / dsh.bundle.patch）
+├── README.md
+├── LICENSE                    # MIT
+└── .gitignore
 ```
 
 ## 安装
@@ -33,15 +35,25 @@ skill 目录会被热加载，不需要重启；拷完直接说"用 code-deep-di
 
 ### 方式二：作为 DSH bundle 安装
 
-`package.json` 声明了 `dsh.bundle.patch`，所以它可以作为一个组合包安装。安装后它会做两件事：把自带的 skill 目录注册进 skill 扫描根（`cordis.patch.yml` 里覆盖 `skill-filesystem` 的 `customSkillDirs`），并可选地接上 repodigest MCP。
+这是一个**纯配置型 bundle**：不含任何 Host/Client 代码，只靠一个 patch 文件把 skill 注册进扫描根，并可选地接上 MCP。它**不声明任何 npm 依赖**——patch 里引用的 `@deepseek-ai/dsh-skill-filesystem` 和 `@deepseek-ai/dsh-mcp-client` 都随 DSH 发行版提供，解析得到。
 
-用 DSH 自带的插件管理能力安装（会话里有 `plugin_manager` 时可让其执行 `install_bundle`），或手动把本目录放进 profile 的依赖里再选上这个 bundle。
+把仓库下载或克隆到本地，然后在会话里：
 
-两点注意：
-- `plugin_manager` 只在宿主提供可编辑 profile 时才启用；Desktop profile 是应用自有的，如果你的会话里没有这个工具，就走**方式一**（拷目录），效果一样。
-- 覆盖 `skill-filesystem` 会**替换整行 config**，所以 patch 里重述了官方那条 skill 目录。你若自定义过那一行（比如改了 `includeDefaultRoots`），记得把等价配置一起补进 `cordis.patch.yml`。
+```
+plugin_manager   action: install_bundle   target: <本目录的绝对路径>
+```
 
-手工改 profile 配置需要更宽的写权限。
+`install_bundle` 会自己完成包安装与 bundle 激活，**不要**手工改 profile 的 `package.json` 或 `cordis.patch.yml`——DSH 文档把这列为禁止做法（手工改还需更宽的写权限）。
+
+装好后它做两件事：
+
+1. **注册 skill 目录**——覆盖 `skill-filesystem` 的 `customSkillDirs`，把自己的包根加进去。skill 的扫描规则是 `<root>/<name>/SKILL.md`，所以包根一注册，`code-deep-dive/SKILL.md` 就能被发现。
+   注意这个覆盖会**替换整行 config**，patch 里已经重述了官方那条目录；如果你的 profile 自定义过那一行（例如改了 `includeDefaultRoots`），需要把等价配置补进 `cordis.patch.yml`。
+2. **可选地接上 repodigest MCP**——路径按 `$DSH_HOME`（默认 `~/.dsh`）与平台现算，指向 `scripts/setup-mcp.*` 建出来的 venv。没跑过安装脚本时这条连接会失败、工具不出现，但 profile 照常加载（`failOnStartupError` 默认 `false`），skill 走降级路径。
+
+**卸载**：用 `plugin_manager` 的 `remove_bundle`（或 `set_bundle` 关掉），再删掉 venv 目录即可。
+
+**前提**：`plugin_manager` 只在宿主提供可编辑 profile 时才可用。如果你的会话里没有这个工具（例如应用自有的 Desktop profile），走**方式一**，效果完全一样。
 
 ### 方式三：其他宿主
 
@@ -101,6 +113,40 @@ grafema 在 Windows 上装不起来，数据流能力在 Windows 只能走降级
 | 读 / 搜 / 写文件 | `read` / `grep` / `glob` / `write` | `Read` / `Grep` / `Glob` / `Write` |
 | 并行派发子代理 | `subagent`（批量多阶段 `workflow`） | `Task` |
 | MCP 工具名前缀 | `mcp__<serverName>__<tool>` | 同名规则 |
+
+## 验证范围（已知限制）
+
+写清楚哪些验证过、哪些没有，免得你踩坑时以为是自己的问题：
+
+| 项 | 状态 |
+|---|---|
+| Windows 上从零安装两个 server + 真机自检 | ✅ 实测（全新 venv、带空格的路径都跑过） |
+| Python 项目端到端跑通（含中文注释的代码） | ✅ 实测 |
+| C++ 项目端到端跑通（结构分析 + 落盘文档） | ✅ 实测 |
+| macOS / Linux 安装脚本 | ⚠️ 只做过语法检查（`bash -n`），**没在真机上跑过** |
+| bundle 实际安装（`install_bundle`） | ⚠️ **未验证**。开发这套东西的环境里没有 `plugin_manager` 工具。patch 的 YAML 结构、目录注册表达式的解析都用真实 node 验证过，但"装上去真的会挂载"没有人验过 |
+| grafema 的数据流工具 | ⚠️ 参数表里留了 5 处 `<按 server 实际 schema>` 占位。没连上那台 server 之前不编造参数 |
+| 第二个人独立安装 | ❌ 没有。目前只有作者和 AI 用过 |
+
+## 第三方依赖
+
+skill 本体不依赖任何第三方代码。MCP 部分调用的是别人的开源项目：
+
+- [repodigest-mcp](https://pypi.org/project/repodigest-mcp/)（MIT）— Python 符号签名、调用图、预算打包
+- [codegraph-mcp-server](https://pypi.org/project/codegraph-mcp-server/)（MIT）— 16 种语言的结构与调用图
+- [@grafema/mcp](https://www.npmjs.com/package/@grafema/mcp)（FSL-1.1-Apache-2.0）— 多语言数据流
+
+本项目与它们没有隶属关系；使用前请各自阅读其许可证。
+
+## 维护须知
+
+`cordis.patch.yml` 靠**包名**定位自己的目录：
+
+```yaml
+- !!js ...createRequire(baseUrl).resolve('code-deep-dive-skill/package.json')
+```
+
+所以**改 `package.json` 里的 `name` 时，必须同步改这一行**，否则安装后 skill 目录注册不上。同理 `serverName` 决定 MCP 工具名前缀（`mcp__repodigest__*`），改它会让已有分析记录和权限规则里的工具名失配。
 
 ## 许可
 

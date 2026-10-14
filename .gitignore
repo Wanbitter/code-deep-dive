@@ -1,0 +1,16 @@
+# Build and cache artifacts
+__pycache__/
+*.pyc
+
+# Packaged distribution
+dist/
+
+# Local dev artifacts, not part of the distributable package
+.backup/
+code-deep-dive.original/
+.probe/
+
+# Analyses this skill produced on private repositories, and throwaway trials.
+# Keep them out of a published repo: they contain other people's code and paths.
+trial/
+cpp-project/

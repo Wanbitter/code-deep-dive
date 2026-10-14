@@ -53,7 +53,17 @@ plugin_manager   action: install_bundle   target: <本目录的绝对路径>
 
 **卸载**：用 `plugin_manager` 的 `remove_bundle`（或 `set_bundle` 关掉），再删掉 venv 目录即可。
 
-**前提**：`plugin_manager` 只在宿主提供可编辑 profile 时才可用。如果你的会话里没有这个工具（例如应用自有的 Desktop profile），走**方式一**，效果完全一样。
+**前提（重要）**：这条路径要求你的 DSH **开放了插件安装**。实测：**Desktop 版（Electron 应用）默认把安装工具关掉**——它的 profile 配置里写着
+
+```yaml
+- id: tool-plugin-manager
+  name: '@deepseek-ai/dsh-plugin-manager/tools'
+  disabled: true          # 顶层直接禁用
+```
+
+而且安装服务本身也受 `profileContext` 门控。所以在 Desktop 版里，会话里不会出现 `plugin_manager` 工具，界面上的插件页背后也没有服务可用——**这不是本包的问题，是应用自有的 profile 不开放这个能力**。
+
+Desktop 用户请直接走**方式一**（拷目录），效果完全一样：skill 的注册只取决于它出现在某个被扫描的根目录里。用 CLI profile（`web` / `headless` / 自定义 profile）的用户才用得上方式二。
 
 ### 方式三：其他宿主
 
@@ -124,7 +134,7 @@ grafema 在 Windows 上装不起来，数据流能力在 Windows 只能走降级
 | Python 项目端到端跑通（含中文注释的代码） | ✅ 实测 |
 | C++ 项目端到端跑通（结构分析 + 落盘文档） | ✅ 实测 |
 | macOS / Linux 安装脚本 | ⚠️ 只做过语法检查（`bash -n`），**没在真机上跑过** |
-| bundle 实际安装（`install_bundle`） | ⚠️ **未验证**。开发这套东西的环境里没有 `plugin_manager` 工具。patch 的 YAML 结构、目录注册表达式的解析都用真实 node 验证过，但"装上去真的会挂载"没有人验过 |
+| bundle 实际安装（`install_bundle`） | ❌ **在 Desktop 版上装不了**，已查明原因：Desktop profile 顶层把 `tool-plugin-manager` 设为 `disabled: true`，安装服务又受 `profileContext` 门控（详见[方式二的前提](#方式二作为-dsh-bundle-安装)）。patch 的 YAML 结构、目录注册表达式的解析都用真实 node 验证过，但**从来没有在真正开放的 profile 上装成功过**——CLI profile 上是否可行未验证 |
 | grafema 的数据流工具 | ⚠️ 参数表里留了 5 处 `<按 server 实际 schema>` 占位。没连上那台 server 之前不编造参数 |
 | 第二个人独立安装 | ❌ 没有。目前只有作者和 AI 用过 |
 
